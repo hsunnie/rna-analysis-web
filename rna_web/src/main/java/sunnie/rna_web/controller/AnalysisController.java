@@ -1,8 +1,15 @@
 package sunnie.rna_web.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+
 import sunnie.rna_web.service.FileColumnService;
 
 import java.util.List;
@@ -17,14 +24,11 @@ import java.util.Map;
 public class AnalysisController {
 
     private final FileColumnService fileColumnService;
+    private final RestTemplate restTemplate;
 
-
-    public AnalysisController(
-            FileColumnService fileColumnService
-    ) {
-
-        this.fileColumnService =
-                fileColumnService;
+    public AnalysisController(FileColumnService fileColumnService) {
+        this.fileColumnService = fileColumnService;
+        this.restTemplate = new RestTemplate();
     }
 
 
@@ -41,6 +45,8 @@ public class AnalysisController {
     ) {
 
         try {
+
+                System.out.println("업로드된 파일명: " + file.getOriginalFilename());
 
             List<String> columns =
                     fileColumnService
@@ -75,7 +81,6 @@ public class AnalysisController {
     // ==========================================
     // 2. 분석 시작
     // ==========================================
-
     @PostMapping("/start")
     public ResponseEntity<?> startAnalysis(
 
@@ -93,54 +98,45 @@ public class AnalysisController {
 
             @RequestParam("padjColumn")
             String padjColumn
-
     ) {
+        try {System.out.println("===== Python 분석 요청 =====");
 
-        System.out.println(
-                "===== 분석 시작 ====="
-        );
+            System.out.println("파일: " + file.getOriginalFilename());
 
+            // =====================================
+            // Python으로 보낼 Multipart 데이터
+            // =====================================
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
-        System.out.println(
-                "파일: "
-                        + file.getOriginalFilename()
-        );
-
-
-        System.out.println(
-                "Gene: "
-                        + geneColumn
-        );
+            body.add("file", new MultipartInputStreamFileResource(file.getInputStream(), file.getOriginalFilename()));
+            body.add("geneColumn", geneColumn);
+            body.add("log2fcColumn", log2fcColumn);
+            body.add("pvalueColumn", pvalueColumn);
+            body.add("padjColumn", padjColumn);
 
 
-        System.out.println(
-                "Log2FC: "
-                        + log2fcColumn
-        );
+            // =====================================
+            // HTTP Header
+            // =====================================
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
 
 
-        System.out.println(
-                "P-value: "
-                        + pvalueColumn
-        );
+            // =====================================
+            // Python 서버 호출
+            // =====================================
+            ResponseEntity<Map> pythonResponse =
+                    restTemplate.postForEntity("http://127.0.0.1:8000/analyze", request, Map.class);
+            System.out.println("Python 응답: " + pythonResponse.getBody());
+            return ResponseEntity.ok(pythonResponse.getBody());
 
-
-        System.out.println(
-                "Padj: "
-                        + padjColumn
-        );
-
-
-        return ResponseEntity.ok(
-                Map.of(
-                        "status",
-                        "success",
-
-                        "message",
-                        "분석 요청을 받았습니다."
-                )
-        );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("status", "error", "message",e.getMessage()));
+        }
     }
+
 
 
     // ==========================================
@@ -149,7 +145,6 @@ public class AnalysisController {
 
     @PostMapping("/preview")
     public ResponseEntity<?> previewData(
-
             @RequestParam("file")
             MultipartFile file,
 
@@ -164,34 +159,11 @@ public class AnalysisController {
 
             @RequestParam("padjColumn")
             String padjColumn
-
     ) {
-
         try {
-
             List<Map<String, String>> preview =
-                    fileColumnService.getPreview(
-
-                            file,
-
-                            geneColumn,
-
-                            log2fcColumn,
-
-                            pvalueColumn,
-
-                            padjColumn
-                    );
-
-
-            return ResponseEntity.ok(
-                    Map.of(
-                            "preview",
-                            preview
-                    )
-            );
-
-
+                    fileColumnService.getPreview(file, geneColumn, log2fcColumn, pvalueColumn, padjColumn);
+            return ResponseEntity.ok(Map.of("preview", preview));
         } catch (Exception e) {
 
             return ResponseEntity
