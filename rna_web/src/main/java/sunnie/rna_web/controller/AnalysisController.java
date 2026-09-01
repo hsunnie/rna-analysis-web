@@ -128,7 +128,7 @@ public class AnalysisController {
             // =====================================
             ResponseEntity<Map> pythonResponse =
                     restTemplate.postForEntity("http://127.0.0.1:8000/analyze", request, Map.class);
-            System.out.println("Python 응답: " + pythonResponse.getBody());
+            System.out.println("Python 분석 응답을 정상적으로 받았습니다."); //     System.out.println("Python 응답: " + pythonResponse.getBody());
             return ResponseEntity.ok(pythonResponse.getBody());
 
         } catch (Exception e) {

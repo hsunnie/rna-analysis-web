@@ -7,13 +7,17 @@ function Home() {
   const [mapping, setMapping] = useState({gene: "", log2fc: "", pvalue: "", padj: ""});
   const [message, setMessage] = useState("");
   const [showMapping, setShowMapping] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
 
   // 파일 선택
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
-      setMessage("");
+      setPreviewData([]); // 이전 파일의 미리보기 삭제
+      setMapping({gene: "", log2fc: "", pvalue: "", padj: ""}); // 이전 컬럼 매핑 삭제
+      setMessage(""); // 이전 메시지도 초기화
+      setAnalysisResult(null);
       setColumns([]);
       setShowMapping(false);
     }
@@ -91,19 +95,22 @@ function Home() {
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/analysis/preview",
+        "http://localhost:8080/api/analysis/start",
         {method: "POST", body: formData}
       );
       const result = await response.json();
       
       if (!response.ok) {
-        setMessage(result.error || "데이터를 불러올 수 없습니다.");
+        setMessage(result.error || "분석을 시작할 수 없습니다.");
         return;
       }
 
-      console.log("미리보기:", result.preview);
-      setPreviewData(result.preview);
-      setMessage("데이터를 정상적으로 읽었습니다.");
+      // console.log("분석 결과:", result);
+      console.log("분석 요약:", {totalGenes: result.totalGenes, significantGenes: result.significantGenes, upregulatedGenes: result.upregulatedGenes, downregulatedGenes: result.downregulatedGenes});
+      console.log("Volcano 첫 5개:", result.volcanoData?.slice(0, 5));
+
+      setAnalysisResult(result);
+      setMessage("분석 요청이 완료되었습니다.");
     } catch (error) {
 
       console.error(error);
@@ -206,7 +213,7 @@ function Home() {
               )}
             </tbody>
           </table>
-          <button className="analyze-button" onClick={() => {setMessage("데이터가 확인되었습니다. 다음 단계에서 분석을 시작합니다.");}}>
+          <button className="analyze-button" onClick={handleStartAnalysis}>
             🧬 이 데이터로 분석 시작
           </button>
         </div>
@@ -214,6 +221,16 @@ function Home() {
 
       {/* 메시지 */}
       {message && (<p>{message}</p>)}
+      
+      {analysisResult && (
+        <div className="analysis-result-box">
+          <h3>🧬 DEG 분석 결과</h3>
+          <p>전체 유전자 수: {analysisResult.totalGenes}</p>
+          <p>유의한 유전자 수: {analysisResult.significantGenes}</p>
+          <p>발현 증가 유전자: {analysisResult.upregulatedGenes}</p>
+          <p>발현 감소 유전자: {analysisResult.downregulatedGenes}</p>
+        </div>
+      )}      
     </div>
   );
 }

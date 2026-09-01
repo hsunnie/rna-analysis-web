@@ -24,21 +24,12 @@ public class FileColumnService {
 
         String filename = file.getOriginalFilename();
 
-        if (filename == null) {
-            throw new IllegalArgumentException(
-                    "파일 이름을 확인할 수 없습니다."
-            );
-        }
+        if (filename == null) {throw new IllegalArgumentException("파일 이름을 확인할 수 없습니다.");}
 
         String lowerName = filename.toLowerCase();
 
         // Excel
-        if (lowerName.endsWith(".xlsx")
-                || lowerName.endsWith(".xls")) {
-
-            return readExcel(file);
-        }
-
+        if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {return readExcel(file);}
         // CSV / TSV / TXT
         return readTextFile(file);
     }
@@ -52,20 +43,12 @@ public class FileColumnService {
             MultipartFile file
     ) throws Exception {
 
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(
-                        file.getInputStream(),
-                        StandardCharsets.UTF_8
-                )
-        );
+        BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
 
         String firstLine = reader.readLine();
+        System.out.println("첫 번째 줄: " + firstLine);
 
-        if (firstLine == null) {
-            throw new IllegalArgumentException(
-                    "빈 파일입니다."
-            );
-        }
+        if (firstLine == null) {throw new IllegalArgumentException("빈 파일입니다.");}
 
         String delimiter;
 
@@ -74,23 +57,15 @@ public class FileColumnService {
         } else if (firstLine.contains(",")) {
             delimiter = ",";
         } else {
-            throw new IllegalArgumentException(
-                    "CSV 또는 TSV 형식을 확인할 수 없습니다."
-            );
+            throw new IllegalArgumentException("CSV 또는 TSV 형식을 확인할 수 없습니다.");
         }
 
-        String[] columns =
-                firstLine.split(delimiter);
+        String[] columns = firstLine.split(delimiter);
 
-        List<String> result =
-                new ArrayList<>();
+        List<String> result = new ArrayList<>();
 
         for (String column : columns) {
-
-            String cleaned = column
-                    .trim()
-                    .replace("\"", "");
-
+            String cleaned = column.trim().replace("\"", "");
             result.add(cleaned);
         }
 
