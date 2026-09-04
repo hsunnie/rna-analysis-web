@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import VolcanoPlot from "./VolcanoPlot";
 
 function Home() {
   const [file, setFile] = useState(null);
@@ -230,7 +231,12 @@ function Home() {
           <p>발현 증가 유전자: {analysisResult.upregulatedGenes}</p>
           <p>발현 감소 유전자: {analysisResult.downregulatedGenes}</p>
         </div>
-      )}      
+      )}
+      {analysisResult?.volcanoData && (
+        <VolcanoPlot
+          data={analysisResult.volcanoData}
+        />
+      )}
     </div>
   );
 }
